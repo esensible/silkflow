@@ -49,7 +49,7 @@ class _Hook:
                 _Hook._update_offs += 1
 
     @staticmethod
-    def _concat(html: List[Union[str, '_Hook']]) -> List[Union[str, '_Hook']]:
+    def _concat(html: List[Union[str, "_Hook"]]) -> List[Union[str, "_Hook"]]:
         # Group consecutive elements by their type
         groups = itertools.groupby(html, key=type)
 
@@ -59,10 +59,14 @@ class _Hook:
             for element in (group if key != str else [group])
         ]
 
-    def __init__(self, html: List[Union[str, '_Hook']], render_func: Optional[Callable[[], List[Union[str, '_Hook']]]] = None) -> None:
+    def __init__(
+        self,
+        html: List[Union[str, "_Hook"]],
+        render_func: Optional[Callable[[], List[Union[str, "_Hook"]]]] = None,
+    ) -> None:
         self.render_func = render_func
 
-        self._html: List[Union[str, '_Hook']] = _Hook._concat(html)
+        self._html: List[Union[str, "_Hook"]] = _Hook._concat(html)
 
         self.index: Optional[int] = None
         self.key: Optional[str] = None
@@ -83,7 +87,7 @@ class _Hook:
         return str(self)
 
     @property
-    def children(self) -> List['_Hook']:
+    def children(self) -> List["_Hook"]:
         return [c for c in self._html if isinstance(c, _Hook)]
 
 
@@ -140,7 +144,6 @@ def _factory(tag_name, allow_children=True):
                 + [" ".join(attributes)]
                 + [" />"]
             )
-
 
     return _impl
 

@@ -23,6 +23,7 @@ def test_basic():
     assert result.key == None
     assert result.index == None
 
+
 def test_img():
     html = img(src="/static/pissing.jpg")
     assert "".join(html) == '<img src="/static/pissing.jpg" />'
@@ -33,7 +34,7 @@ def test_img():
     # img in a _Hook
     result = _Hook(img(src="/static/pissing.jpg"))
     assert result.html == '<img src="/static/pissing.jpg" />'
-    
+
 
 def test_hooks():
     html = div(div("world"), _Hook(div("hi", zzz=True)))
@@ -65,24 +66,27 @@ def test_hooks():
 
     assert result.children[1].children == []
 
+
 def test_nested_hook():
     """Testing a specific bug where a nested hook was causing a key to be set on the outer div"""
+
     @hook
     def a_str():
         return "str"
-    
+
     def nop():
         return div(a_str())
-    
-    result = ''.join(str(e) for e in div(nop()))
+
+    result = "".join(str(e) for e in div(nop()))
 
     soup = BeautifulSoup(result, "html.parser")
 
     outer_div = soup.div
     inner_div = outer_div.div
 
-    assert 'key' not in outer_div.attrs
-    assert 'key' in inner_div.attrs
+    assert "key" not in outer_div.attrs
+    assert "key" in inner_div.attrs
+
 
 def test_context():
     c1 = State(0)
@@ -171,8 +175,6 @@ def test_concat():
     assert _Hook._concat(input) == ["ab", h1, "cde", h2, "f"]
 
 
-
-
 def test_html_endpoint():
     app = fastapi.FastAPI()
     app.include_router(router)
@@ -227,5 +229,3 @@ def test_html_endpoint():
             "state": i + 1,
             "updates": [[key, 0, f"new str {i}"]],
         }
-
-
