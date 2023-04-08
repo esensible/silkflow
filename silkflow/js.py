@@ -1,137 +1,126 @@
-#     return [random.randint(CONFIRM_SIZE, SCREEN_WIDTH-CONFIRM_SIZE), random.randint(CONFIRM_SIZE, SCREEN_HEIGHT-TOTAL_BUTTON_HEIGHT-CONFIRM_SIZE)]
-# SCREEN_WIDTH = 1272
-# SCREEN_HEIGHT = 1474
-
-# # size of confirmation button
-# CONFIRM_SIZE = 100
-
-# # 400 is total of bottom buttons
-# TOTAL_BUTTON_HEIGHT = 500
+from . import html
 
 
-def render(callback_url, poll_url, initial_state, body):
+def js_code(callback_url, poll_url, initial_state):
     return f"""
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>Extreme Racer</title>
-                <script>
-                    state = {initial_state};
+        state = {initial_state};
 
-                    replaceKey = function (key, index, newHtml) {{
-                        var parent = document.querySelector('[key="' + key + '"]');
-                        if (!parent) {{ return; }}
-                        var child = parent.childNodes[index];
-                        if (!child) {{ return; }}
-                        var tempContainer = document.createElement('div');
-                        tempContainer.innerHTML = newHtml;
-                        var newElement = tempContainer.firstChild;
-                        parent.replaceChild(newElement, child);
-                    }};
-                    pythonImpl = function (id, event) {{
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('POST', "{callback_url}", true);
-                        xhr.setRequestHeader('Content-Type', 'application/json');
-                        xhr.onreadystatechange = function() {{
-                            if (xhr.readyState === 4 && xhr.status === 200) {{
-                                var data = JSON.parse(xhr.responseText);
-                                if (data) {{
-                                    state = data.state;
-                                    data.updates.forEach(function(item) {{
-                                        replaceKey(item[0], item[1], item[2]);
-                                    }});
-                                }}
-                            }}
-                        }};
-                        xhr.send(JSON.stringify({{
-                            id: id,
-                            event: {{test: 23}}
-                        }}));
-                    }};
-                    python = function(id) {{
-                        return function (e) {{
-                            pythonImpl(id, e);
-                            return false;
-                        }};
-                    }};
-                    confirm = function(id, count) {{
-                        if (typeof count === 'undefined') {{
-                            count = 0;
-                        }}
+        replaceKey = function (key, index, newHtml) {{
+            var parent = document.querySelector('[key="' + key + '"]');
+            if (!parent) {{ return; }}
+            var child = parent.childNodes[index];
+            if (!child) {{ return; }}
+            var tempContainer = document.createElement('div');
+            tempContainer.innerHTML = newHtml;
+            var newElement = tempContainer.firstChild;
+            parent.replaceChild(newElement, child);
+        }};
+        pythonImpl = function (id, event) {{
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', "{callback_url}", true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {{
+                if (xhr.readyState === 4 && xhr.status === 200) {{
+                    var data = JSON.parse(xhr.responseText);
+                    if (data) {{
+                        state = data.state;
+                        data.updates.forEach(function(item) {{
+                            replaceKey(item[0], item[1], item[2]);
+                        }});
+                    }}
+                }}
+            }};
+            xhr.send(JSON.stringify({{
+                id: id,
+                event: {{test: 23}}
+            }}));
+        }};
+        python = function(id) {{
+            return function (e) {{
+                pythonImpl(id, e);
+                return false;
+            }};
+        }};
+        confirm = function(id, count) {{
+            if (typeof count === 'undefined') {{
+                count = 0;
+            }}
 
-                        return function (e) {{
-                            confirmImpl(id, e, count);
-                            return false;
-                        }}
-                    }};
+            return function (e) {{
+                confirmImpl(id, e, count);
+                return false;
+            }}
+        }};
 
-                    confirmImpl = (function(size, screenWidth, screenHeight, timeout) {{
-                        var existingButton;
+        confirmImpl = (function(size, screenWidth, screenHeight, timeout) {{
+            var existingButton;
 
-                        return function(id, e, count) {{
-                            if (existingButton) {{
-                                existingButton.parentNode.removeChild(existingButton);
-                            }}
+            return function(id, e, count) {{
+                if (existingButton) {{
+                    existingButton.parentNode.removeChild(existingButton);
+                }}
 
-                            var leftPosition = Math.random() * (screenWidth - 2 * size) + size;
-                            var topPosition = Math.random() * (screenHeight - 2 * size) + size;
+                var leftPosition = Math.random() * (screenWidth - 2 * size) + size;
+                var topPosition = Math.random() * (screenHeight - 2 * size) + size;
 
-                            var floatingButton = document.createElement('button');
+                var floatingButton = document.createElement('button');
 
-                            floatingButton.style.position = 'absolute';
-                            floatingButton.style.left = leftPosition + 'px';
-                            floatingButton.style.top = topPosition + 'px';
-                            floatingButton.style.width = size + 'px';
-                            floatingButton.style.height = size + 'px';
-                            floatingButton.className = 'confirm';
+                floatingButton.style.position = 'absolute';
+                floatingButton.style.left = leftPosition + 'px';
+                floatingButton.style.top = topPosition + 'px';
+                floatingButton.style.width = size + 'px';
+                floatingButton.style.height = size + 'px';
+                floatingButton.className = 'confirm';
 
-                            floatingButton.onclick = function() {{
-                                clearTimeout(removeTimeout);
-                                floatingButton.parentNode.removeChild(floatingButton);
-                                existingButton = null;
+                floatingButton.onclick = function() {{
+                    clearTimeout(removeTimeout);
+                    floatingButton.parentNode.removeChild(floatingButton);
+                    existingButton = null;
 
-                                if (count > 1) {{
-                                    confirmImpl(id, e, count - 1);
-                                }} else {{
-                                    pythonImpl(id, e);
-                                }}
-                                return false;
-                            }};
+                    if (count > 1) {{
+                        confirmImpl(id, e, count - 1);
+                    }} else {{
+                        pythonImpl(id, e);
+                    }}
+                    return false;
+                }};
 
-                            document.body.appendChild(floatingButton);
+                document.body.appendChild(floatingButton);
 
-                            var removeTimeout = setTimeout(function() {{
-                                floatingButton.parentNode.removeChild(floatingButton);
-                                existingButton = null;
-                            }}, timeout);
+                var removeTimeout = setTimeout(function() {{
+                    floatingButton.parentNode.removeChild(floatingButton);
+                    existingButton = null;
+                }}, timeout);
 
-                            existingButton = floatingButton;
+                existingButton = floatingButton;
 
-                        }};
-                    }})(100, 1272, 1474 - 500, 5000);
-                    
-                    window.setInterval(function (id, event) {{
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('GET', "{poll_url}?state=" + state, true);
-                        xhr.setRequestHeader('Content-Type', 'application/json');
-                        xhr.onreadystatechange = function() {{
-                            if (xhr.readyState === 4 && xhr.status === 200) {{
-                                var data = JSON.parse(xhr.responseText);
-                                if (data) {{
-                                    state = data.state;
-                                    data.updates.forEach(function(item) {{
-                                        replaceKey(item[0], item[1], item[2]);
-                                    }});
-                                }}
-                            }}
-                        }};
-                        xhr.send();
-                    }}, 1000);
-
-
-                </script>
-                <link href="static/css/style2.css" rel="stylesheet">
-            </head>
-            {body}
-        </html>
+            }};
+        }})(100, 1272, 1474 - 500, 5000);
+        
+        window.setInterval(function (id, event) {{
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', "{poll_url}?state=" + state, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {{
+                if (xhr.readyState === 4 && xhr.status === 200) {{
+                    var data = JSON.parse(xhr.responseText);
+                    if (data) {{
+                        state = data.state;
+                        data.updates.forEach(function(item) {{
+                            replaceKey(item[0], item[1], item[2]);
+                        }});
+                    }}
+                }}
+            }};
+            xhr.send();
+        }}, 1000);
     """
+
+
+def render(body, callback_url, poll_url, initial_state, head_elems=[]):
+    return html.html(
+        html.head(
+            html.script(js_code(callback_url, poll_url, initial_state)), *head_elems
+        ),
+        *body,
+    )

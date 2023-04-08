@@ -19,8 +19,14 @@ def toggle(_):
     state.value = not state.value
 
 
+def head():
+    return [
+        silkflow.html.title("Button example"),
+    ]
+
+
 @app.get("/")
-@silkflow.hook(render=True)
+@silkflow.hook(render=True, head_elems=head())
 def index():
     return silkflow.html.div(
         silkflow.html.h1(button_pressed()),

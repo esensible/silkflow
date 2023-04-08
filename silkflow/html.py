@@ -88,7 +88,15 @@ menu = _factory("menu")
 menuitem = _factory("menuitem")
 summary = _factory("summary")
 
+html = _factory("html")
 style = _factory("style")
+head = _factory("head")
+title = _factory("title")
+body = _factory("body")
+script = _factory("script")
+link = _factory("link", allow_children=False)
+meta = _factory("meta", allow_children=False)
+
 
 # # Non-standard for reactive hooks
 # string = String

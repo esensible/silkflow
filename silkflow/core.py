@@ -171,16 +171,20 @@ def hook(*dec_args, **dec_kwargs):
             @functools.wraps(fn)
             def _impl2():
                 # _impl has a hook attribute so we maintain a reference
-                if not hasattr(_impl2, "body"):
-                    _impl2.body = _Hook._concat(_factory("body")(fn()))
-                result = js.render(
-                    CALLBACK_URL,
-                    POLL_URL,
-                    _Hook._update_offs + len(_Hook._updates),
-                    "".join((str(b) for b in _impl2.body)),
+                if not hasattr(_impl2, "html"):
+                    body = _factory("body")(fn(), **dec_kwargs.get("body_attrs", {}))
+                    _impl2.doc = _Hook(
+                        js.render(
+                            body,
+                            CALLBACK_URL,
+                            POLL_URL,
+                            _Hook._update_offs + len(_Hook._updates),
+                            head_elems=dec_kwargs.get("head_elems", []),
+                        )
+                    )
+                return HTMLResponse(
+                    content="<!DOCTYPE html>" + _impl2.doc.html, status_code=200
                 )
-
-                return HTMLResponse(content=result, status_code=200)
 
             fn = hook(fn)
 
