@@ -24,6 +24,10 @@ Silkflow is designed to support multiple synchronized clients, making it a great
 - Alternative communication methods to Websockets, using HTTP long-polling
 - Designed for synchronized, multi-head clients for real-time collaboration and shared experiences
 
+## Examples
+
+* [ExtremeRacer](https://github.com/esensible/extremeracer) This project was developed for and split out from this sailing tactician application. It provides a pretty good example of more complex usage.
+
 ## Acknowledgements
 
 We would like to acknowledge the projects that inspired the creation of Silkflow, such as Dash and IDOM. The ideas and concepts from these projects have greatly influenced the development of Silkflow, and we appreciate their contributions to the web development ecosystem.
