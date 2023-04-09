@@ -9,7 +9,7 @@ from typing import Callable, List, Tuple, Set, Optional, Union
 
 import fastapi
 from fastapi import APIRouter
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from . import js
 
@@ -255,9 +255,9 @@ async def _callback(
             state=_Hook._update_offs + len(_Hook._updates), updates=_Hook._updates[-1]
         )
 
-    root = "/"
-    response = RedirectResponse(url=root)
-    response.status_code = 302
+    response = JSONResponse(content={})
+    response.status_code = 200
+    response.headers["X-Redirect-URL"] = "/"
     return response
 
 
@@ -269,9 +269,9 @@ async def _poll(state: int):
         return dict(state=state, updates=[])
 
     if state < _Hook._update_offs:
-        root = "/"
-        response = RedirectResponse(url=root)
-        response.status_code = 302
+        response = JSONResponse(content={})
+        response.status_code = 200
+        response.headers["X-Redirect-URL"] = "/"
         return response
 
     flat_updates = [

@@ -21,12 +21,17 @@ def js_code(callback_url, poll_url, initial_state):
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = function() {{
                 if (xhr.readyState === 4 && xhr.status === 200) {{
-                    var data = JSON.parse(xhr.responseText);
-                    if (data) {{
-                        state = data.state;
-                        data.updates.forEach(function(item) {{
-                            replaceKey(item[0], item[1], item[2]);
-                        }});
+                    var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
+                    if (redirectUrl) {{
+                        window.location.href = redirectUrl;
+                    }} else {{
+                        var data = JSON.parse(xhr.responseText);
+                        if (data) {{
+                            state = data.state;
+                            data.updates.forEach(function(item) {{
+                                replaceKey(item[0], item[1], item[2]);
+                            }});
+                        }}
                     }}
                 }}
             }};
@@ -103,12 +108,17 @@ def js_code(callback_url, poll_url, initial_state):
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = function() {{
                 if (xhr.readyState === 4 && xhr.status === 200) {{
-                    var data = JSON.parse(xhr.responseText);
-                    if (data) {{
-                        state = data.state;
-                        data.updates.forEach(function(item) {{
-                            replaceKey(item[0], item[1], item[2]);
-                        }});
+                    var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
+                    if (redirectUrl) {{
+                        window.location.href = redirectUrl;
+                    }} else {{
+                        var data = JSON.parse(xhr.responseText);
+                        if (data) {{
+                            state = data.state;
+                            data.updates.forEach(function(item) {{
+                                replaceKey(item[0], item[1], item[2]);
+                            }});
+                        }}
                     }}
                 }}
             }};
