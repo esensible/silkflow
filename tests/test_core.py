@@ -171,3 +171,26 @@ def test_concat():
 
     print(_Hook._concat(input))
     assert _Hook._concat(input) == ["ab", h1, "cde", h2, "f"]
+
+
+def test_render():
+    c1 = State("str")
+
+    @hook
+    def the_str():
+        return c1.value
+
+    @hook(render=True)
+    def test():
+        return div(the_str())
+
+    result = test()
+    soup = BeautifulSoup(result.body, "html.parser")
+    body_key = soup.body["key"]
+
+    # assert that pulling the same content doesn't re-render (ie change the key)
+    result = test()
+    soup = BeautifulSoup(result.body, "html.parser")
+    assert body_key == soup.body["key"]
+
+

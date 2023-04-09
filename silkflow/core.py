@@ -171,7 +171,7 @@ def hook(*dec_args, **dec_kwargs):
             @functools.wraps(fn)
             def _impl2():
                 # _impl has a hook attribute so we maintain a reference
-                if not hasattr(_impl2, "html"):
+                if not hasattr(_impl2, "doc"):
                     body = _factory("body")(fn(), **dec_kwargs.get("body_attrs", {}))
                     _impl2.doc = _Hook(
                         js.render(
