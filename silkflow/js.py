@@ -101,29 +101,49 @@ def js_code(callback_url, poll_url, initial_state):
 
             }};
         }})(100, 1272, 1474 - 500, 5000);
-        
-        window.setInterval(function (id, event) {{
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', "{poll_url}?state=" + state, true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.onreadystatechange = function() {{
-                if (xhr.readyState === 4 && xhr.status === 200) {{
-                    var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
-                    if (redirectUrl) {{
-                        window.location.href = redirectUrl;
-                    }} else {{
-                        var data = JSON.parse(xhr.responseText);
-                        if (data) {{
-                            state = data.state;
-                            data.updates.forEach(function(item) {{
-                                replaceKey(item[0], item[1], item[2]);
-                            }});
-                        }}
-                    }}
+
+        (function() {{
+            var apply_ms;
+
+            function pollServer() {{
+                var xhr = new XMLHttpRequest();
+                var url = "{poll_url}?state=" + state;
+                if (typeof apply_ms !== 'undefined') {{
+                    url += "&apply_ms=" + apply_ms;
                 }}
-            }};
-            xhr.send();
-        }}, 1000);
+                xhr.open('GET', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                xhr.setRequestHeader('Pragma', 'no-cache');
+                xhr.setRequestHeader('Expires', '0');
+                xhr.onreadystatechange = function() {{
+                    if (xhr.readyState === 4) {{
+                        if (xhr.status === 200) {{
+                            var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
+                            if (redirectUrl) {{
+                                window.location.href = redirectUrl;
+                            }} else {{
+                                var applyStartTime = new Date().getTime();
+                                var data = JSON.parse(xhr.responseText);
+                                if (data) {{
+                                    state = data.state;
+                                    data.updates.forEach(function(item) {{
+                                        replaceKey(item[0], item[1], item[2]);
+                                    }});
+                                    apply_ms = new Date().getTime() - applyStartTime;
+                                }} else {{
+                                    apply_ms = undefined;
+                                }}
+                            }}
+                        }}
+                        setTimeout(pollServer, 0);
+                    }}
+                }};
+                xhr.send();
+            }}
+
+            pollServer();
+        }})();        
     """
 
 

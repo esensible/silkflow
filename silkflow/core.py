@@ -6,6 +6,7 @@ import weakref
 from collections import deque
 from html import escape
 from typing import Callable, List, Tuple, Set, Optional, Union
+import time
 
 import fastapi
 from fastapi import APIRouter
@@ -21,8 +22,21 @@ POLL_URL = "/poll"
 
 # Maximum number of updates that are retained. A client falling befhind by more
 # than this will be forced to reload the page.
-MAX_UPDATES = 3
+MAX_UPDATES = 5
 
+#
+# Condition to release clients waiting on a GET to  POLL_URL
+#
+sync_condition = None
+def init():
+    global sync_condition
+    sync_condition = asyncio.Condition()
+    
+async def sync_poll():
+    """Convenience funciton to sync clients blocking on /poll"""
+    _Hook.push_updates()
+    async with sync_condition:
+        sync_condition.notify_all()
 
 class _Hook:
     # note: __weakref__ required to support weak references with __slots__
@@ -249,11 +263,10 @@ async def _callback(
 ):
     if id in _callback_map:
         _callback_map[id](event)
-        _Hook.push_updates()
 
-        return dict(
-            state=_Hook._update_offs + len(_Hook._updates), updates=_Hook._updates[-1]
-        )
+        current_time = int(time.time() * 1000)
+        sync_poll()
+        return dict(time=current_time)
 
     response = JSONResponse(content={})
     response.status_code = 200
@@ -262,24 +275,35 @@ async def _callback(
 
 
 @router.get(POLL_URL)
-async def _poll(state: int):
-    _Hook.push_updates()
-
-    if state >= _Hook._update_offs + len(_Hook._updates):
-        return dict(state=state, updates=[])
-
+async def _poll(state: int, apply_ms: Optional[int] = None):
     if state < _Hook._update_offs:
         response = JSONResponse(content={})
         response.status_code = 200
         response.headers["X-Redirect-URL"] = "/"
         return response
 
-    flat_updates = [
-        u
-        for updates in itertools.islice(
-            _Hook._updates, state - _Hook._update_offs, None
-        )
-        for u in updates
-    ]
+    try:
+        async with sync_condition:
+            # await asyncio.wait_for(sync_condition.wait(), 2)
+            await sync_condition.wait()
+    except asyncio.TimeoutError:
+        pass
 
-    return dict(state=_Hook._update_offs + len(_Hook._updates), updates=flat_updates)
+    if state >= _Hook._update_offs + len(_Hook._updates):
+        updates=[]
+    else:
+        updates = [
+            u
+            for updates in itertools.islice(
+                _Hook._updates, state - _Hook._update_offs, None
+            )
+            for u in updates
+        ]
+
+    current_time = int(time.time() * 1000)
+    data = dict(state=_Hook._update_offs + len(_Hook._updates), updates=updates, time=current_time)
+    response = JSONResponse(content=data)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Expires"] = "0"
+
+    return response
