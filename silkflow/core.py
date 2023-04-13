@@ -24,19 +24,20 @@ POLL_URL = "/poll"
 # than this will be forced to reload the page.
 MAX_UPDATES = 5
 
-#
-# Condition to release clients waiting on a GET to  POLL_URL
-#
-sync_condition = None
-def init():
-    global sync_condition
-    sync_condition = asyncio.Condition()
-    
-async def sync_poll():
-    """Convenience funciton to sync clients blocking on /poll"""
-    _Hook.push_updates()
-    async with sync_condition:
-        sync_condition.notify_all()
+
+_sync_condition = None
+
+
+async def sync_poll() -> None:
+    global _sync_condition
+
+    if _sync_condition is None:
+        _sync_condition = asyncio.Condition()
+
+    async with _sync_condition:
+        _Hook.push_updates()
+        _sync_condition.notify_all()
+
 
 class _Hook:
     # note: __weakref__ required to support weak references with __slots__
@@ -118,6 +119,18 @@ def _factory(tag_name, allow_children=True):
         if not allow_children and children:
             raise ValueError(f"<{tag_name} /> cannot have children")
 
+        def attrs():
+            if attributes:
+                return " ".join(
+                    [" "]
+                    + [
+                        f"{k}" if isinstance(v, bool) and v else f'{k}="{escape(v)}"'
+                        for k, v in sorted(attributes.items())
+                    ]
+                )
+            else:
+                return ""
+
         if allow_children:
             result = []
             # pre-allocated key for just in case
@@ -137,27 +150,9 @@ def _factory(tag_name, allow_children=True):
             if have_hook:
                 attributes["key"] = str(key)
 
-            attributes = [
-                f"{k}" if isinstance(v, bool) and v else f'{k}="{escape(v)}"'
-                for k, v in sorted(attributes.items())
-            ]
-            return (
-                [f"<{tag_name} " if attributes else f"<{tag_name}"]
-                + [" ".join(attributes)]
-                + [">"]
-                + result
-                + [f"</{tag_name}>"]
-            )
+            return [f"<{tag_name}{attrs()}>"] + result + [f"</{tag_name}>"]
         else:
-            attributes = [
-                f"{k}" if isinstance(v, bool) and v else f'{k}="{escape(v)}"'
-                for k, v in sorted(attributes.items())
-            ]
-            return (
-                [f"<{tag_name} " if attributes else f"<{tag_name}"]
-                + [" ".join(attributes)]
-                + [" />"]
-            )
+            return [f"<{tag_name}{attrs()}/>"]
 
     return _impl
 
@@ -186,7 +181,9 @@ def hook(*dec_args, **dec_kwargs):
             def _impl2():
                 # _impl has a hook attribute so we maintain a reference
                 if not hasattr(_impl2, "body"):
-                    _impl2.body = _factory("body")(fn(), **dec_kwargs.get("body_attrs", {}))
+                    _impl2.body = _factory("body")(
+                        fn(), **dec_kwargs.get("body_attrs", {})
+                    )
                 response = _Hook(
                     js.render(
                         _impl2.body,
@@ -265,7 +262,8 @@ async def _callback(
         _callback_map[id](event)
 
         current_time = int(time.time() * 1000)
-        sync_poll()
+        # Don't yield here
+        asyncio.create_task(sync_poll())
         return dict(time=current_time)
 
     response = JSONResponse(content={})
@@ -276,21 +274,22 @@ async def _callback(
 
 @router.get(POLL_URL)
 async def _poll(state: int, apply_ms: Optional[int] = None):
+    global _sync_condition
+
     if state < _Hook._update_offs:
         response = JSONResponse(content={})
         response.status_code = 200
         response.headers["X-Redirect-URL"] = "/"
         return response
 
-    try:
-        async with sync_condition:
-            # await asyncio.wait_for(sync_condition.wait(), 2)
-            await sync_condition.wait()
-    except asyncio.TimeoutError:
-        pass
+    if _sync_condition is None:
+        _sync_condition = asyncio.Condition()
+
+    async with _sync_condition:
+        await _sync_condition.wait()
 
     if state >= _Hook._update_offs + len(_Hook._updates):
-        updates=[]
+        updates = []
     else:
         updates = [
             u
@@ -301,7 +300,11 @@ async def _poll(state: int, apply_ms: Optional[int] = None):
         ]
 
     current_time = int(time.time() * 1000)
-    data = dict(state=_Hook._update_offs + len(_Hook._updates), updates=updates, time=current_time)
+    data = dict(
+        state=_Hook._update_offs + len(_Hook._updates),
+        updates=updates,
+        time=current_time,
+    )
     response = JSONResponse(content=data)
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Expires"] = "0"

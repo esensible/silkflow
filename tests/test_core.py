@@ -192,5 +192,3 @@ def test_render():
     result = test()
     soup = BeautifulSoup(result.body, "html.parser")
     assert body_key == soup.body["key"]
-
-

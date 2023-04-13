@@ -27,10 +27,7 @@ def js_code(callback_url, poll_url, initial_state):
                     }} else {{
                         var data = JSON.parse(xhr.responseText);
                         if (data) {{
-                            state = data.state;
-                            data.updates.forEach(function(item) {{
-                                replaceKey(item[0], item[1], item[2]);
-                            }});
+                            // TODO: update timestamp offset here
                         }}
                     }}
                 }}
