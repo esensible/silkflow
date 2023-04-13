@@ -23,15 +23,15 @@ def test_basic():
 
 
 def test_img():
-    html = img(src="/static/pissing.jpg")
-    assert "".join(html) == '<img src="/static/pissing.jpg" />'
+    html = img(src="/static/an_image.jpg")
+    assert "".join(html) == '<img src="/static/an_image.jpg"/>'
 
-    html = img(src="/static/pissing.jpg", Class="pissing")
-    assert "".join(html) == '<img Class="pissing" src="/static/pissing.jpg" />'
+    html = img(src="/static/an_image.jpg", Class="yay")
+    assert "".join(html) == '<img Class="yay" src="/static/an_image.jpg"/>'
 
     # img in a _Hook
-    result = _Hook(img(src="/static/pissing.jpg"))
-    assert result.html == '<img src="/static/pissing.jpg" />'
+    result = _Hook(img(src="/static/an_image.jpg"))
+    assert result.html == '<img src="/static/an_image.jpg"/>'
 
 
 def test_hooks():

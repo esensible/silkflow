@@ -122,7 +122,7 @@ def _factory(tag_name, allow_children=True):
         def attrs():
             if attributes:
                 return " ".join(
-                    [" "]
+                    [""]
                     + [
                         f"{k}" if isinstance(v, bool) and v else f'{k}="{escape(v)}"'
                         for k, v in sorted(attributes.items())
