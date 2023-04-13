@@ -23,6 +23,10 @@ async def clock_task():
         next_minute = now + timedelta(seconds=1)
         next_minute = next_minute.replace(microsecond=0)
         remaining_seconds = (next_minute - now).total_seconds()
+        # just chill if we wake a little early
+        if remaining_seconds < 0.01:
+            next_minute += timedelta(seconds=1)
+            remaining_seconds = (next_minute - now).total_seconds()
         await asyncio.sleep(remaining_seconds)
         _clock.value = next_minute.strftime("%I:%M:%S").lstrip("0")
         await silkflow.sync_poll()

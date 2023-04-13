@@ -51,7 +51,7 @@ span = _factory("span")
 strong = _factory("strong")
 sub = _factory("sub")
 sup = _factory("sup")
-time = _factory("time")
+# time = _factory("time")
 u = _factory("u")
 var = _factory("var")
 
