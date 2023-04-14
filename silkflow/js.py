@@ -1,21 +1,92 @@
 from . import html
 
 
-def js_code(callback_url, poll_url, initial_state):
+def offset_manager(window_len):
     return f"""
-        state = {initial_state};
+        (function (maxListSize) {{
+            var offsets = [];
 
-        replaceKey = function (key, index, newHtml) {{
-            var parent = document.querySelector('[key="' + key + '"]');
-            if (!parent) {{ return; }}
-            var child = parent.childNodes[index];
-            if (!child) {{ return; }}
-            var tempContainer = document.createElement('div');
-            tempContainer.innerHTML = newHtml;
-            var newElement = tempContainer.firstChild;
-            parent.replaceChild(newElement, child);
-        }};
-        pythonImpl = function (id, event) {{
+            function addTime(serverTime) {{
+                var clientTime = new Date().getTime();
+                var offset = serverTime - clientTime;
+
+                if (offsets.length >= maxListSize) {{
+                    offsets.shift();
+                }}
+                offsets.push(offset);
+            }}
+
+            function getOffsetTime() {{
+                var now = new Date().getTime();
+                var averageOffset = offsets.reduce(function (a, b) {{ return a + b; }}, 0) / offsets.length;
+                return now + averageOffset;
+            }}
+
+            return {{
+                addTime: addTime,
+                getOffsetTime: getOffsetTime
+            }};
+        }})({window_len});
+    """
+
+
+def polling_loop(poll_url, initial_state, time_manager):
+    return f"""
+        (function(timeOffsetManager, initial_state, poll_url) {{
+            var state = {initial_state};
+
+            replaceKey = function (key, index, newHtml) {{
+                var parent = document.querySelector('[key="' + key + '"]');
+                if (!parent) {{ return; }}
+                var child = parent.childNodes[index];
+                if (!child) {{ return; }}
+                var tempContainer = document.createElement('div');
+                tempContainer.innerHTML = newHtml;
+                var newElement = tempContainer.firstChild;
+                parent.replaceChild(newElement, child);
+            }};
+
+            function pollServer() {{
+                var xhr = new XMLHttpRequest();
+                var url = "{poll_url}?state=" + state;
+                xhr.open('GET', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                xhr.setRequestHeader('Pragma', 'no-cache');
+                xhr.setRequestHeader('Expires', '0');
+                xhr.onreadystatechange = function() {{
+                    if (xhr.readyState === 4) {{
+                        if (xhr.status === 200) {{
+                            var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
+                            if (redirectUrl) {{
+                                window.location.href = redirectUrl;
+                            }} else {{
+                                var data = JSON.parse(xhr.responseText);
+                                if (data) {{
+                                    state = data.state;
+                                    data.updates.forEach(function(item) {{
+                                        replaceKey(item[0], item[1], item[2]);
+                                    }});
+                                    if (data.time !== undefined) {{
+                                        timeOffsetManager.addTime(data.time);
+                                    }}
+                                }}
+                            }}
+                        }}
+                        setTimeout(pollServer, 0);
+                    }}
+                }};
+                xhr.send();
+            }}
+
+            pollServer();
+        }})({time_manager})
+    """
+
+
+def callback_handlers(callback_url, offset_manager):
+    return f"""
+        pythonImpl = function (id, event, timestamp) {{
             var xhr = new XMLHttpRequest();
             xhr.open('POST', "{callback_url}", true);
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -24,32 +95,31 @@ def js_code(callback_url, poll_url, initial_state):
                     var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
                     if (redirectUrl) {{
                         window.location.href = redirectUrl;
-                    }} else {{
-                        var data = JSON.parse(xhr.responseText);
-                        if (data) {{
-                            // TODO: update timestamp offset here
-                        }}
                     }}
                 }}
             }};
             xhr.send(JSON.stringify({{
                 id: id,
-                event: {{test: 23}}
+                event: {{time: timestamp}},
             }}));
         }};
+
         python = function(id) {{
             return function (e) {{
-                pythonImpl(id, e);
+                var timestamp = {offset_manager}.getOffsetTime();
+                pythonImpl(id, e, timestamp);
                 return false;
             }};
         }};
+
         confirm = function(id, count) {{
             if (typeof count === 'undefined') {{
                 count = 0;
             }}
 
             return function (e) {{
-                confirmImpl(id, e, count);
+                var timestamp = {offset_manager}.getOffsetTime();
+                confirmImpl(id, e, count, timestamp);
                 return false;
             }}
         }};
@@ -57,7 +127,7 @@ def js_code(callback_url, poll_url, initial_state):
         confirmImpl = (function(size, screenWidth, screenHeight, timeout) {{
             var existingButton;
 
-            return function(id, e, count) {{
+            return function(id, e, count, timestamp) {{
                 if (existingButton) {{
                     existingButton.parentNode.removeChild(existingButton);
                 }}
@@ -80,9 +150,9 @@ def js_code(callback_url, poll_url, initial_state):
                     existingButton = null;
 
                     if (count > 1) {{
-                        confirmImpl(id, e, count - 1);
+                        confirmImpl(id, e, count - 1, timestamp);
                     }} else {{
-                        pythonImpl(id, e);
+                        pythonImpl(id, e, timestamp);
                     }}
                     return false;
                 }};
@@ -97,57 +167,27 @@ def js_code(callback_url, poll_url, initial_state):
                 existingButton = floatingButton;
 
             }};
-        }})(100, 1272, 1474 - 500, 5000);
-
-        (function() {{
-            var apply_ms;
-
-            function pollServer() {{
-                var xhr = new XMLHttpRequest();
-                var url = "{poll_url}?state=" + state;
-                if (typeof apply_ms !== 'undefined') {{
-                    url += "&apply_ms=" + apply_ms;
-                }}
-                xhr.open('GET', url, true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                xhr.setRequestHeader('Pragma', 'no-cache');
-                xhr.setRequestHeader('Expires', '0');
-                xhr.onreadystatechange = function() {{
-                    if (xhr.readyState === 4) {{
-                        if (xhr.status === 200) {{
-                            var redirectUrl = xhr.getResponseHeader("X-Redirect-URL");
-                            if (redirectUrl) {{
-                                window.location.href = redirectUrl;
-                            }} else {{
-                                var applyStartTime = new Date().getTime();
-                                var data = JSON.parse(xhr.responseText);
-                                if (data) {{
-                                    state = data.state;
-                                    data.updates.forEach(function(item) {{
-                                        replaceKey(item[0], item[1], item[2]);
-                                    }});
-                                    apply_ms = new Date().getTime() - applyStartTime;
-                                }} else {{
-                                    apply_ms = undefined;
-                                }}
-                            }}
-                        }}
-                        setTimeout(pollServer, 0);
-                    }}
-                }};
-                xhr.send();
-            }}
-
-            pollServer();
-        }})();        
+        }})(100, 1272, 1474 - 500, 5000);     
     """
+
+
+def js_script(callback_url, poll_url, initial_state):
+    return html.script(
+        f"""
+        var offsetManager = {offset_manager(5)};
+
+        {polling_loop(poll_url, initial_state, "offsetManager")}
+
+        {callback_handlers(callback_url, "offsetManager")};
+    """
+    )
 
 
 def render(body, callback_url, poll_url, initial_state, head_elems=[]):
     return html.html(
         html.head(
-            html.script(js_code(callback_url, poll_url, initial_state)), *head_elems
+            js_script(callback_url, poll_url, initial_state),
+            *head_elems,
         ),
         *body,
     )

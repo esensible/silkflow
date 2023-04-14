@@ -29,6 +29,7 @@ async def clock_task():
             remaining_seconds = (next_minute - now).total_seconds()
         await asyncio.sleep(remaining_seconds)
         _clock.value = next_minute.strftime("%I:%M:%S").lstrip("0")
+        # causes the long poll to return and the UI to refresh
         await silkflow.sync_poll()
 
 
