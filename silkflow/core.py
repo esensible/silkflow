@@ -34,8 +34,8 @@ async def sync_poll() -> None:
     if _sync_condition is None:
         _sync_condition = asyncio.Condition()
 
-    _Hook.push_updates()
     async with _sync_condition:
+        _Hook.push_updates()
         _sync_condition.notify_all()
 
 
@@ -286,8 +286,9 @@ async def _poll(state: int, apply_ms: Optional[int] = None):
         _sync_condition = asyncio.Condition()
 
     async with _sync_condition:
-        await _sync_condition.wait()
-
+        if state >= _Hook._update_offs + len(_Hook._updates):
+            await _sync_condition.wait()
+    
     if state >= _Hook._update_offs + len(_Hook._updates):
         updates = []
     else:

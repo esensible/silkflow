@@ -58,6 +58,11 @@ async def test_get():
 
         # Confirm updates are chained - yes, this overwrites the same element
         c1.value = "str2"
+        # need an explicit sync here or poll?state=0 returns immediately
+        # without picking up "str2" update.
+        # This is typical of async loops updating state as opposed to via callbacks
+        await silkflow.sync_poll()
+
         await _test_poll(client, 0, 2, [[key, 0, "new str"], [key, 0, "str2"]])
         await _test_poll(client, 1, 2, [[key, 0, "str2"]])
         await _test_poll(client, 2, 2, [])
