@@ -34,16 +34,20 @@ def polling_loop(poll_url, initial_state, time_manager):
     return f"""
         (function(timeOffsetManager, initial_state, poll_url) {{
             var state = {initial_state};
+            var tempContainer = document.createElement('div');
 
-            replaceKey = function (key, index, newHtml) {{
+            var replaceKey = function (key, index, newHtml) {{
                 var parent = document.querySelector('[key="' + key + '"]');
-                if (!parent) {{ return; }}
-                var child = parent.childNodes[index];
-                if (!child) {{ return; }}
-                var tempContainer = document.createElement('div');
-                tempContainer.innerHTML = newHtml;
-                var newElement = tempContainer.firstChild;
-                parent.replaceChild(newElement, child);
+                if (!parent) {{ return; }}               
+                if (typeof index === 'string') {{
+                    parent.setAttribute(index, newHtml);
+                }} else {{
+                    var child = parent.childNodes[index];
+                    if (!child) {{ return; }}
+                    tempContainer.innerHTML = newHtml;
+                    var newElement = tempContainer.firstChild;
+                    parent.replaceChild(newElement, child);
+                }}
             }};
 
             function pollServer() {{

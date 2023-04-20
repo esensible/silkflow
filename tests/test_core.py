@@ -192,3 +192,26 @@ def test_render():
     result = test()
     soup = BeautifulSoup(result.body, "html.parser")
     assert body_key == soup.body["key"]
+
+def test_attribute():
+    klass = State("")
+
+    @hook
+    def the_class():
+        return klass.value
+
+    @hook(render=True)
+    def test():
+        return div("hi", Class=the_class())
+
+    result = test()
+    soup = BeautifulSoup(result.body, "html.parser")
+    the_div = list(soup.body.children)[0]
+    assert list(the_div.children) == ["hi"]
+    assert the_div["class"] == []
+
+    klass.value = "new class"
+    result = test()
+    soup = BeautifulSoup(result.body, "html.parser")
+    the_div = list(soup.body.children)[0]
+    assert the_div["class"] == ["new", "class"]

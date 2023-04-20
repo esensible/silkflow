@@ -83,8 +83,8 @@ class _Hook:
 
         self._html: List[Union[str, "_Hook"]] = _Hook._concat(html)
 
-        self.index: Optional[int] = None
-        self.key: Optional[str] = None
+        self.index = None
+        self.key = None
 
     def flush(self) -> None:
         self._html = []
@@ -119,25 +119,14 @@ def _factory(tag_name, allow_children=True):
         if not allow_children and children:
             raise ValueError(f"<{tag_name} /> cannot have children")
 
-        def attrs():
-            if attributes:
-                return " ".join(
-                    [""]
-                    + [
-                        f"{k}" if isinstance(v, bool) and v else f'{k}="{escape(v)}"'
-                        for k, v in sorted(attributes.items())
-                    ]
-                )
-            else:
-                return ""
-
+        # pre-allocated key for just in case
+        key = uuid.uuid4().hex[:8]
+        have_hook = False
+        # render the children first so we know if a hook is present
         if allow_children:
-            result = []
-            # pre-allocated key for just in case
-            key = uuid.uuid4().hex[:8]
-            have_hook = False
+            result = [">"]
             for idx, c in enumerate(children):
-                if type(c) == _Hook and c.key is None:
+                if isinstance(c, _Hook) and c.key is None:
                     c.index = idx
                     c.key = key
                     result.append(c)
@@ -146,13 +135,30 @@ def _factory(tag_name, allow_children=True):
                     result += c
                 else:
                     result.append(c)
+            result.append(f"</{tag_name}>")
+        else:
+            result = ["/>"]
+
+        # now go back and build the tag and attributes
+        preface = [f"<{tag_name}"]
+        if attributes or have_hook:
+            for k, v in sorted(attributes.items()):
+                if isinstance(v, _Hook) and v.key is None:
+                    v.index = k
+                    v.key = key
+                    preface += [f' {k}="', v, '"']
+                    have_hook = True
+                # elif iscallable(v):
+                # TODO: support callbacks more cleanly
+                elif isinstance(v, bool) and v:
+                    preface.append(f" {k}")
+                else:
+                    preface.append(f' {k}="{escape(v)}"')
 
             if have_hook:
-                attributes["key"] = str(key)
+                preface.append(f' key="{key}"')
 
-            return [f"<{tag_name}{attrs()}>"] + result + [f"</{tag_name}>"]
-        else:
-            return [f"<{tag_name}{attrs()}/>"]
+        return preface + result
 
     return _impl
 
@@ -288,7 +294,7 @@ async def _poll(state: int, apply_ms: Optional[int] = None):
     async with _sync_condition:
         if state >= _Hook._update_offs + len(_Hook._updates):
             await _sync_condition.wait()
-    
+
     if state >= _Hook._update_offs + len(_Hook._updates):
         updates = []
     else:
