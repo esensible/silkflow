@@ -23,7 +23,8 @@ async def _test_poll(client, state, expected_state, expected_updates):
 def _init_core():
     silkflow.core._Hook._stale_hooks = set()
     silkflow.core._Hook._updates = deque()
-    silkflow.core._Hook._update_offs: int = 0
+    silkflow.core._Hook._update_offs = 0
+    silkflow.core._sync_condition = None
 
 
 @pytest.mark.asyncio
