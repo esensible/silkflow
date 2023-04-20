@@ -19,6 +19,7 @@ router = APIRouter()
 
 CALLBACK_URL = "/callback"
 POLL_URL = "/poll"
+LOG_URL = "/log"
 
 # Maximum number of updates that are retained. A client falling befhind by more
 # than this will be forced to reload the page.
@@ -195,6 +196,7 @@ def hook(*dec_args, **dec_kwargs):
                         _impl2.body,
                         CALLBACK_URL,
                         POLL_URL,
+                        LOG_URL,
                         _Hook._update_offs + len(_Hook._updates),
                         head_elems=dec_kwargs.get("head_elems", []),
                     )
@@ -317,3 +319,10 @@ async def _poll(state: int, apply_ms: Optional[int] = None):
     response.headers["Expires"] = "0"
 
     return response
+
+@router.post(LOG_URL)
+async def log_endpoint(
+    log: str = fastapi.Body(embed=True)
+):
+    print(log)
+    return {"status": "success"}

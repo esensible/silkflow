@@ -1,5 +1,40 @@
 from . import html
 
+def console_log(url):
+    return f"""
+        (function() {{
+        var originalConsoleLog = console.log;
+        var endpointUrl = '{url}';
+
+        function sendLogToServer(message) {{
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', endpointUrl, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({{ log: message }}));
+        }}
+
+        console.log = function() {{
+            var args = Array.prototype.slice.call(arguments);
+            var message = args.join(' ');
+
+            originalConsoleLog.apply(console, args);
+            sendLogToServer(message);
+        }};
+
+        window.onerror = function(message, source, lineno, colno, error) {{
+            var errorDetails = {{
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error ? error.stack : null
+            }};
+
+            sendLogToServer(JSON.stringify(errorDetails));
+        }};
+        }})();
+    """
+
 
 def offset_manager(window_len):
     return f"""
@@ -175,7 +210,7 @@ def callback_handlers(callback_url, offset_manager):
     """
 
 
-def js_script(callback_url, poll_url, initial_state):
+def js_script(callback_url, poll_url, log_url, initial_state):
     return html.script(
         f"""
         var offsetManager = {offset_manager(5)};
@@ -183,14 +218,16 @@ def js_script(callback_url, poll_url, initial_state):
         {polling_loop(poll_url, initial_state, "offsetManager")}
 
         {callback_handlers(callback_url, "offsetManager")};
+
+        {console_log(log_url)};
     """
     )
 
 
-def render(body, callback_url, poll_url, initial_state, head_elems=[]):
+def render(body, callback_url, poll_url, log_url, initial_state, head_elems=[]):
     return html.html(
         html.head(
-            js_script(callback_url, poll_url, initial_state),
+            js_script(callback_url, poll_url, log_url, initial_state),
             *head_elems,
         ),
         *body,
