@@ -1,27 +1,18 @@
-# Silkflow - Reactive Python Framework for the Kindle Paperwhite
+# Silkflow - Reactive Python Framework for Kindles
 
-Silkflow is a lightweight, reactive web framework for Python, specifically designed for Kindle devices like the Kindle Paperwhite. With its e-ink display, long battery life, and IP67 rating, the Kindle Paperwhite is an excellent choice for hobbyist projects such as home automation, weather station displays, and other IoT applications. Silkflow simplifies the development, testing, and deployment of applications on Kindle devices, allowing you to create engaging and interactive user interfaces tailored for your projects.
+Silkflow is a lightweight reactive web framework that brings the Kindle Paperwhite and Raspberry Pi together for a match made in heaven. Designed specifically for resource-constrained environments, Silkflow allows you to create interactive web applications in Python, similar to Plotly Dash or Streamlit, but with a focus on supporting the Kindle Paperwhite as a low-cost, IP67 rated, daylight readable display.
 
-Silkflow is designed to work with ES5 JavaScript and uses HTTP long-polling as an alternative to Websockets for providing a reactive user experience. This design choice ensures compatibility with a wide range of devices, including older or lower-powered devices that may not support newer JavaScript features.
+## Kindle Paperwhite and Raspberry Pi: A Perfect Pair
 
-Silkflow is also designed to support multiple synchronized clients, making it a great choice for applications that require real-time collaboration or shared state to be displayed across multiple devices.
+Silkflow unlocks the potential of the Kindle Paperwhite as a versatile, low-cost, waterproof, daylight readable display, powered by a Raspberry Pi or similar embedded controllers. This framework is ideal for hobbyists and tinkerers who want to bring their creative ideas to life using the Kindle Paperwhite as a display for projects like home automation control panels, weather station displays, or real-time data dashboards.
 
 ## Features
 
-- Lightweight and efficient design optimized for lower-power devices and the Silk browser
-- Reactive web framework with support for ES5 JavaScript
-- Alternative communication methods to Websockets, using HTTP long-polling
-- Designed for synchronized, multi-head clients for real-time collaboration and shared experiences
-
-## Kindle Paperwhite
-
-The Kindle Paperwhite is an awesome display for loads of projects, not to mention that the HW is subsidised
-
-* **High-resolution e-ink display**: The Kindle Paperwhite's easily readable display works well under various lighting conditions.
-* **IP67 rated**: The Paperwhite's durability and suitability for diverse environments make it a reliable display choice.
-* **Low power consumption**: The device lasts weeks on a single charge, making it perfect for energy-efficient projects.
-
-Silkflow was developed with the sole purpose of delivering IoT and other projects designed to rock the Kindle Paperwhite's capabilities, providing a visually appealing and functional user experience. Explore Silkflow and unlock the full potential of the Kindle Paperwhite for your projects.
+* **Kindle Paperwhite Support:** Tailored for use with the Kindle Paperwhite, leveraging its unique features as a low-cost, IP67 rated, daylight readable display.
+* **Lightweight and Efficient:** Designed for resource-constrained environments, Silkflow ensures smooth performance on a wide range of devices, including the Kindle Paperwhite.
+* **Reactive Web Framework:** Build interactive and dynamic applications with ease using Silkflow's Python-based reactive framework, embracing real-time updates without tedious page reloads.
+* **Synchronized Multi-client Support:** Create applications that require real-time collaboration or shared state across multiple devices, taking full advantage of the Kindle Paperwhite as a display.
+Getting Started
 
 ## Getting Started
 
@@ -79,10 +70,21 @@ def index():
     )
 ```
 
+In this example, we use FastAPI as our web framework and Silkflow to create a simple web application with a button that toggles between "On" and "Off". When the button is clicked, the **toggle** function is called, which updates the **state** value. The **button_pressed** function is used as a hook to display the current state of the button in an **<h1>** element. The **index** function renders the application with the Silkflow HTML elements.
 
 ## Examples
 
 * [ExtremeRacer](https://github.com/esensible/extremeracer) This project was developed for and split out from this sailing tactician application. It provides a pretty good example of more complex usage.
+
+## Kindle Paperwhite
+
+The Kindle Paperwhite is an awesome display for loads of projects, not to mention that the HW is subsidised
+
+* **High-resolution e-ink display:** The Kindle Paperwhite's easily readable display works well under various lighting conditions.
+* **IP67 rated:** The Paperwhite's durability and suitability for diverse environments make it a reliable display choice.
+* **Low power consumption:** The device lasts weeks on a single charge, making it perfect for energy-efficient projects.
+
+Silkflow was developed with the sole purpose of delivering IoT and other projects designed to rock the Kindle Paperwhite's capabilities, providing a visually appealing and functional user experience. Explore Silkflow and unlock the full potential of the Kindle Paperwhite for your projects.
 
 ## Acknowledgements
 
