@@ -168,6 +168,43 @@ _hook_stack = []
 
 
 def hook(*dec_args, **dec_kwargs):
+   """
+    Decorator to mark a function as a hook. A hook is a special function that can
+    be used to update parts of the Silkflow application in response to state changes.
+
+    If a single callable is provided as an argument, it is assumed to be a hook function.
+    In this case, the decorator wraps the function and manages the associated hooks.
+
+    If the "render" keyword argument is set to True, the decorator assumes the function
+    is a render function. It creates a FastAPI-compatible function that returns an
+    HTMLResponse with the rendered content of the Silkflow application.
+
+    Usage:
+        @hook
+        def some_hook():
+            ...
+
+        @hook(render=True, head_elems=[...], body_attrs={...})
+        def render_function():
+            ...
+
+    Args:
+        *dec_args: Arguments for the decorator. If a single callable is provided,
+            it is assumed to be a hook function.
+        **dec_kwargs: Keyword arguments for the decorator. Can contain the following keys:
+            - render (bool): If True, the decorator assumes the function is a render function.
+            - head_elems (List[HTMLElement]): Optional list of head elements to include in the
+                rendered HTML when render=True.
+            - body_attrs (Dict[str, Any]): Optional dictionary of body attributes to include
+                in the rendered HTML when render=True.
+
+    Raises:
+        ValueError: If an invalid combination of arguments or keyword arguments is provided.
+
+    Returns:
+        Union[Callable, _Hook]: The wrapped function or a _Hook instance depending on the use case.
+    """
+       
     if len(dec_args) == 1 and callable(dec_args[0]):
 
         @functools.wraps(dec_args[0])
@@ -215,21 +252,48 @@ def hook(*dec_args, **dec_kwargs):
 
 
 class State(object):
+    """
+    State represents a mutable state value in a Silkflow application.
+    When the state value changes, it triggers updates to the associated hooks.
+
+    Attributes:
+        _value: The current value of the state.
+        hooks (Set[Callable]): A set of hook functions to be called when the state value changes.
+        _lock: An asyncio lock to ensure thread-safe state updates.
+    """    
     __slots__ = ["_value", "hooks", "_lock"]
 
     def __init__(self, initial_value):
+        """
+        Initializes the State with an initial value.
+
+        Args:
+            initial_value: The initial value of the state.
+        """        
         self._value = initial_value
         self.hooks = set()
         self._lock = asyncio.Lock()
 
     @property
     def value(self):
+        """
+        The current value of the state.
+
+        Returns:
+            The current value of the state.
+        """        
         if len(_hook_stack) > 0:
             _hook_stack[-1].add(self)
         return self._value
 
     @value.setter
     def value(self, value):
+        """
+        Sets a new value for the state and triggers updates to the associated hooks.
+
+        Args:
+            value: The new value to be set for the state.
+        """        
         # assert (
         #     len(_hook_stack) == 0
         # ), "Don't update context values from within render hooks"
@@ -243,6 +307,22 @@ _callback_map = {}
 
 
 def callback(*dec_args, **dec_kwargs):
+    """
+    Decorator for callback functions in a Silkflow application.
+    When used, it assigns a unique ID to the callback function and
+    stores it in the _callback_map.
+
+    Args:
+        dec_args: Positional arguments for the decorator.
+        dec_kwargs: Keyword arguments for the decorator.
+
+    Returns:
+        A string that triggers the appropriate JavaScript function
+        with the associated callback ID and event object.
+
+    Raises:
+        ValueError: If the decorator is used improperly.
+    """    
     if len(dec_args) == 1 and callable(dec_args[0]):
         id = uuid.uuid4().hex[:8]
         _callback_map[id] = dec_args[0]
