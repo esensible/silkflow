@@ -70,7 +70,7 @@ def index():
     )
 ```
 
-In this example, we use FastAPI as our web framework and Silkflow to create a simple web application with a button that toggles between "On" and "Off". When the button is clicked, the **toggle** function is called, which updates the **state** value. The **button_pressed** function is used as a hook to display the current state of the button in an **<h1>** element. The **index** function renders the application with the Silkflow HTML elements.
+In this example, we use FastAPI as our web framework and Silkflow to create a simple web application with a button that toggles between "On" and "Off". When the button is clicked, the **toggle** function is called, which updates the **state** value. The **button_pressed** function is used as a hook to display the current state of the button in an **\<h1>** element. The **index** function renders the application with the Silkflow HTML elements.
 
 ## Examples
 
