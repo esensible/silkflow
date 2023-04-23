@@ -168,7 +168,7 @@ _hook_stack = []
 
 
 def hook(*dec_args, **dec_kwargs):
-   """
+    """
     Decorator to mark a function as a hook. A hook is a special function that can
     be used to update parts of the Silkflow application in response to state changes.
 
