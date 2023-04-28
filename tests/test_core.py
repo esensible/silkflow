@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import weakref
 
-from silkflow.core import _Hook, State, hook, router
+from silkflow.core import _Effect, Signal, effect
 from silkflow.html import *
 
 
@@ -15,7 +15,7 @@ def test_basic():
     html = div(div("hi", zzz=True), div("there"), blah="bongo")
     assert "".join(html) == '<div blah="bongo"><div zzz>hi</div><div>there</div></div>'
 
-    result = _Hook(div("test"))
+    result = _Effect(div("test"))
     assert result.html == "<div>test</div>"
     assert result.children == []
     assert result.key == None
@@ -29,24 +29,26 @@ def test_img():
     html = img(src="/static/an_image.jpg", Class="yay")
     assert "".join(html) == '<img Class="yay" src="/static/an_image.jpg"/>'
 
-    # img in a _Hook
-    result = _Hook(img(src="/static/an_image.jpg"))
+    # img in a _Effect
+    result = _Effect(img(src="/static/an_image.jpg"))
     assert result.html == '<img src="/static/an_image.jpg"/>'
 
 
-def test_hooks():
-    html = div(div("world"), _Hook(div("hi", zzz=True)))
-    hooks = [h for h in html if isinstance(h, _Hook)]
-    assert len(hooks) == 1
+def test_effects():
+    html = div(div("world"), _Effect(div("hi", zzz=True)))
+    effects = [h for h in html if isinstance(h, _Effect)]
+    assert len(effects) == 1
     assert (
         "".join(str(h) for h in html)
-        == f'<div key="{hooks[0].key}"><div>world</div><div zzz>hi</div></div>'
+        == f'<div key="{effects[0].key}"><div>world</div><div zzz>hi</div></div>'
     )
-    assert hooks[0].html == "<div zzz>hi</div>"
-    assert hooks[0].children == []
-    assert hooks[0].index == 1
+    assert effects[0].html == "<div zzz>hi</div>"
+    assert effects[0].children == []
+    assert effects[0].index == 1
 
-    result = _Hook(div(div("padding"), _Hook(div("world")), _Hook(div("hi", zzz=True))))
+    result = _Effect(
+        div(div("padding"), _Effect(div("world")), _Effect(div("hi", zzz=True)))
+    )
     assert result.key == None
     assert result.index == None
     assert len(result.children) == 2
@@ -65,10 +67,10 @@ def test_hooks():
     assert result.children[1].children == []
 
 
-def test_nested_hook():
-    """Testing a specific bug where a nested hook was causing a key to be set on the outer div"""
+def test_nested_effect():
+    """Testing a specific bug where a nested effect was causing a key to be set on the outer div"""
 
-    @hook
+    @effect
     def a_str():
         return "str"
 
@@ -87,14 +89,14 @@ def test_nested_hook():
 
 
 def test_context():
-    c1 = State(0)
-    c2 = State(0)
+    c1 = Signal(0)
+    c2 = Signal(0)
 
-    @hook
+    @effect
     def _nested():
         return div(f"_nested {c2.value}, {c1.value}")
 
-    @hook
+    @effect
     def test():
         return div(div(f"hi {c1.value}"), _nested())
 
@@ -104,13 +106,13 @@ def test_context():
         result.html
         == f'<div key="{result.children[0].key}"><div>hi 0</div><div>_nested 0, 0</div></div>'
     )
-    assert weakref.ref(result) in c1.hooks
+    assert weakref.ref(result) in c1.effects
     assert len(result.children) == 1
 
     assert result.children[0].html == "<div>_nested 0, 0</div>"
     c2.value = 2
-    stale = _Hook._stale_hooks
-    _Hook._stale_hooks = set()
+    stale = _Effect._stale_effects
+    _Effect._stale_effects = set()
     assert len([s for s in stale if s() is not None]) == 1
     assert next(s() for s in stale).html == "<div>_nested 2, 0</div>"
     assert result.children[0].html == "<div>_nested 2, 0</div>"
@@ -122,11 +124,11 @@ def test_context():
     c1.value = 1
     c2.value = 2
 
-    stale2 = _Hook._stale_hooks
-    _Hook._stale_hooks = set()
-    # probs have 1 dead hook in the stale list
+    stale2 = _Effect._stale_effects
+    _Effect._stale_effects = set()
+    # probs have 1 dead effect in the stale list
     assert len([s for s in stale2 if s() is not None]) == 1
-    # the original stale list only has dead hook refs now
+    # the original stale list only has dead effect refs now
     assert len([s for s in stale if s() is not None]) == 0
 
     assert (
@@ -136,14 +138,14 @@ def test_context():
     assert result.children[0].html == "<div>_nested 2, 1</div>"
 
 
-def test_str_hook():
-    c1 = State("str")
+def test_str_effect():
+    c1 = Signal("str")
 
-    @hook
+    @effect
     def the_str():
         return c1.value
 
-    @hook
+    @effect
     def test():
         return div(the_str())
 
@@ -151,11 +153,11 @@ def test_str_hook():
     key = result.children[0].key
     assert result.html == f'<div key="{result.children[0].key}">str</div>'
     assert len(result.children) == 1
-    assert weakref.ref(result.children[0]) in c1.hooks
+    assert weakref.ref(result.children[0]) in c1.effects
 
     c1.value = "new str"
-    stale = _Hook._stale_hooks
-    _Hook._stale_hooks = set()
+    stale = _Effect._stale_effects
+    _Effect._stale_effects = set()
     assert len([s for s in stale if s() is not None]) == 1
 
     assert result.html == f'<div key="{key}">new str</div>'
@@ -163,24 +165,24 @@ def test_str_hook():
 
 
 def test_concat():
-    # Hook._concat() was busted, so this is a test
+    # Effect._concat() was busted, so this is a test
 
-    h1 = _Hook([])
-    h2 = _Hook([])
+    h1 = _Effect([])
+    h2 = _Effect([])
     input = ["a", "b", h1, "c", "d", "e", h2, "f"]
 
-    print(_Hook._concat(input))
-    assert _Hook._concat(input) == ["ab", h1, "cde", h2, "f"]
+    print(_Effect._concat(input))
+    assert _Effect._concat(input) == ["ab", h1, "cde", h2, "f"]
 
 
 def test_render():
-    c1 = State("str")
+    c1 = Signal("str")
 
-    @hook
+    @effect
     def the_str():
         return c1.value
 
-    @hook(render=True)
+    @effect(render=True)
     def test():
         return div(the_str())
 
@@ -193,14 +195,15 @@ def test_render():
     soup = BeautifulSoup(result.body, "html.parser")
     assert body_key == soup.body["key"]
 
-def test_attribute():
-    klass = State("")
 
-    @hook
+def test_attribute():
+    klass = Signal("")
+
+    @effect
     def the_class():
         return klass.value
 
-    @hook(render=True)
+    @effect(render=True)
     def test():
         return div("hi", Class=the_class())
 

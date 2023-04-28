@@ -11,10 +11,10 @@ app.include_router(silkflow.router)
 
 
 #
-# Time of day clock. The sync_poll() call will sync the client(s) on
+# Time of day clock. The sync_effects() call will sync the client(s) on
 # 1s boundaries.
 #
-_clock = silkflow.State(datetime.now().strftime("%I:%M:%S").lstrip("0"))
+_clock = silkflow.Signal(datetime.now().strftime("%I:%M:%S").lstrip("0"))
 
 
 async def clock_task():
@@ -30,18 +30,18 @@ async def clock_task():
         await asyncio.sleep(remaining_seconds)
         _clock.value = next_minute.strftime("%I:%M:%S").lstrip("0")
         # causes the long poll to return and the UI to refresh
-        await silkflow.sync_poll()
+        await silkflow.sync_effects()
 
 
-@silkflow.hook
+@silkflow.effect
 def clock():
     return _clock.value
 
 
 #
-# Asynchronous timer to demonstrate /poll synchronisation
+# Asynchronous timer to demonstrate /effects synchronisation
 #
-_counter = silkflow.State(0)
+_counter = silkflow.Signal(0)
 
 
 async def counter_task():
@@ -50,7 +50,7 @@ async def counter_task():
         _counter.value += 1
 
 
-@silkflow.hook
+@silkflow.effect
 def counter():
     return str(_counter.value)
 
@@ -65,7 +65,7 @@ _title = silkflow.html.title("Clock example")
 
 
 @app.get("/")
-@silkflow.hook(render=True, head_elems=[_title])
+@silkflow.effect(render=True, head_elems=[_title])
 def index():
     return silkflow.html.div(
         silkflow.html.h1(silkflow.html.span("Clock: "), clock()),

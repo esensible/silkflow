@@ -6,10 +6,10 @@ import fastapi
 app = fastapi.FastAPI()
 app.include_router(silkflow.router)
 
-state = silkflow.State(False)
+state = silkflow.Signal(False)
 
 
-@silkflow.hook
+@silkflow.effect
 def button_pressed():
     return "On" if state.value else "Off"
 
@@ -26,7 +26,7 @@ def head():
 
 
 @app.get("/")
-@silkflow.hook(render=True, head_elems=head())
+@silkflow.effect(render=True, head_elems=head())
 def index():
     return silkflow.html.div(
         silkflow.html.h1(button_pressed()),

@@ -8,7 +8,8 @@ app.include_router(silkflow.router)
 
 # Create a title and style elements
 _title = silkflow.html.title("Font Example")
-_style = silkflow.html.style("""
+_style = silkflow.html.style(
+    """
     .center-text {
         text-align: center;
     }
@@ -23,42 +24,54 @@ _style = silkflow.html.style("""
         justify-content: center;
         gap: 10px;
     }
-""")
+"""
+)
 
-# Define the state for the font class
-font_class = silkflow.State("large-font")
+# Define the signal for the font class
+font_class = silkflow.Signal("large-font")
 
-# Define a hook for updating the font class
-@silkflow.hook
+
+# Define a effect for updating the font class
+@silkflow.effect
 def update_font_class():
     return font_class.value
+
 
 # Define the font change event handlers
 @silkflow.callback
 def set_large_font(_):
     font_class.value = "large-font"
 
+
 @silkflow.callback
 def set_red_color(_):
     font_class.value = "red-color"
 
+
 # Define the main render function
 @app.get("/")
-@silkflow.hook(render=True, head_elems=[_title, _style])
+@silkflow.effect(render=True, head_elems=[_title, _style])
 def main():
     return silkflow.html.div(
         silkflow.html.h1("Font Example", Class="center-text"),
-        silkflow.html.p("Click the buttons below to change the font properties.", Class="center-text"),
+        silkflow.html.p(
+            "Click the buttons below to change the font properties.",
+            Class="center-text",
+        ),
         silkflow.html.div(
             silkflow.html.button("Large Font", onClick=set_large_font),
             silkflow.html.button("Red Color", onClick=set_red_color),
             Class="button-container",
         ),
         silkflow.html.div(
-            silkflow.html.p("This text will change based on the selected font property.", Class=update_font_class()),
+            silkflow.html.p(
+                "This text will change based on the selected font property.",
+                Class=update_font_class(),
+            ),
             Class="font-box",
         ),
     )
+
 
 if __name__ == "__main__":
     import uvicorn

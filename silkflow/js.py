@@ -1,5 +1,6 @@
 from . import html
 
+
 def console_log(url):
     return f"""
         (function() {{
@@ -65,9 +66,9 @@ def offset_manager(window_len):
     """
 
 
-def polling_loop(poll_url, initial_state, time_manager):
+def effects_loop(session_id, effects_url, initial_state, time_manager):
     return f"""
-        (function(timeOffsetManager, initial_state, poll_url) {{
+        (function(timeOffsetManager, initial_state, effects_url) {{
             var state = {initial_state};
             var tempContainer = document.createElement('div');
 
@@ -85,9 +86,9 @@ def polling_loop(poll_url, initial_state, time_manager):
                 }}
             }};
 
-            function pollServer() {{
+            function pollEffects() {{
                 var xhr = new XMLHttpRequest();
-                var url = "{poll_url}?state=" + state;
+                var url = "{effects_url}?session={session_id}&state=" + state;
                 xhr.open('GET', url, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -112,13 +113,13 @@ def polling_loop(poll_url, initial_state, time_manager):
                                 }}
                             }}
                         }}
-                        setTimeout(pollServer, 0);
+                        setTimeout(pollEffects, 0);
                     }}
                 }};
                 xhr.send();
             }}
 
-            pollServer();
+            pollEffects();
         }})({time_manager})
     """
 
@@ -210,24 +211,18 @@ def callback_handlers(callback_url, offset_manager):
     """
 
 
-def js_script(callback_url, poll_url, log_url, initial_state):
-    return html.script(
-        f"""
-        var offsetManager = {offset_manager(5)};
-
-        {polling_loop(poll_url, initial_state, "offsetManager")}
-
-        {callback_handlers(callback_url, "offsetManager")};
-
-        {console_log(log_url)};
-    """
-    )
-
-
-def render(body, callback_url, poll_url, log_url, initial_state, head_elems=[]):
+def render(body, session_id, callback_url, effects_url, log_url, initial_state, head_elems=[]):
     return html.html(
         html.head(
-            js_script(callback_url, poll_url, log_url, initial_state),
+            html.script(f"""
+                var offsetManager = {offset_manager(5)};
+
+                {effects_loop(session_id, effects_url, initial_state, "offsetManager")}
+
+                {callback_handlers(callback_url, "offsetManager")};
+
+                {console_log(log_url)};
+            """),
             *head_elems,
         ),
         *body,

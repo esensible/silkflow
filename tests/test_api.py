@@ -8,9 +8,9 @@ import pytest
 import silkflow
 
 
-async def _test_poll(client, state, expected_state, expected_updates):
+async def _test_effects(client, state, expected_state, expected_updates):
     response, _ = await asyncio.gather(
-        client.get(f"/poll?state={state}"), silkflow.sync_poll()
+        client.get(f"/effects?session={silkflow.core._session_id}&state={state}"), silkflow.sync_effects()
     )
     assert response.status_code == 200
     result = response.json()
@@ -20,10 +20,11 @@ async def _test_poll(client, state, expected_state, expected_updates):
         "time": result["time"],
     }
 
+
 def _init_core():
-    silkflow.core._Hook._stale_hooks = set()
-    silkflow.core._Hook._updates = deque()
-    silkflow.core._Hook._update_offs = 0
+    silkflow.core._Effect._stale_effects = set()
+    silkflow.core._Effect._backlog = deque()
+    silkflow.core._Effect._backlog_offs = 0
     silkflow.core._sync_condition = None
 
 
@@ -34,14 +35,14 @@ async def test_get():
     app = fastapi.FastAPI()
     app.include_router(silkflow.router)
 
-    c1 = silkflow.State("str")
+    c1 = silkflow.Signal("str")
 
-    @silkflow.hook
+    @silkflow.effect
     def the_str():
         return c1.value
 
     @app.get("/")
-    @silkflow.hook(render=True)
+    @silkflow.effect(render=True)
     def test():
         return silkflow.html.div(the_str())
 
@@ -55,40 +56,39 @@ async def test_get():
         assert container.text == "str"
         key = container["key"]
 
-        await _test_poll(client, 0, 0, [])
+        await _test_effects(client, 0, 0, [])
 
         c1.value = "new str"
 
         c1.value = "new str"
-        await _test_poll(client, 0, 1, [[key, 0, "new str"]])
+        await _test_effects(client, 0, 1, [[key, 0, "new str"]])
         # idempotent poll
-        await _test_poll(client, 0, 1, [[key, 0, "new str"]])
-        await _test_poll(client, 1, 1, [])
+        await _test_effects(client, 0, 1, [[key, 0, "new str"]])
+        await _test_effects(client, 1, 1, [])
 
         # Confirm updates are chained - yes, this overwrites the same element
         c1.value = "str2"
-        # need an explicit sync here or poll?state=0 returns immediately
+        # need an explicit sync here or effects?state=0 returns immediately
         # without picking up "str2" update.
         # This is typical of async loops updating state as opposed to via callbacks
-        await silkflow.sync_poll()
+        await silkflow.sync_effects()
 
-        await _test_poll(client, 0, 2, [[key, 0, "new str"], [key, 0, "str2"]])
-        await _test_poll(client, 1, 2, [[key, 0, "str2"]])
-        await _test_poll(client, 2, 2, [])
+        await _test_effects(client, 0, 2, [[key, 0, "new str"], [key, 0, "str2"]])
+        await _test_effects(client, 1, 2, [[key, 0, "str2"]])
+        await _test_effects(client, 2, 2, [])
 
         # blow out core.MAX_UPDATES
-        for i in range(2, silkflow.core.MAX_UPDATES + 3):
+        for i in range(2, silkflow.core.BACKLOG_LEN + 3):
             c1.value = f"new str {i}"
-            await _test_poll(client, i, i + 1, [[key, 0, f"new str {i}"]])
+            await _test_effects(client, i, i + 1, [[key, 0, f"new str {i}"]])
 
-        # if we've fallen off the cached updates, we expect a redirect
-        response = await client.get(f"/poll?state=0")
+        # if we've fallen off the cached effects, we expect a redirect
+        response = await client.get(f"/effects?session={silkflow.core._session_id}&state=0")
         assert response.status_code == 200
         x_redirect_url = response.headers.get("X-Redirect-URL")
         assert x_redirect_url == "/"
         result = response.json()
         assert result == {}
-
 
 
 @pytest.mark.asyncio
@@ -98,14 +98,14 @@ async def test_attribute():
     app = fastapi.FastAPI()
     app.include_router(silkflow.router)
 
-    _attr = silkflow.State("value")
+    _attr = silkflow.Signal("value")
 
-    @silkflow.hook
+    @silkflow.effect
     def attr():
         return _attr.value
 
     @app.get("/")
-    @silkflow.hook(render=True)
+    @silkflow.effect(render=True)
     def test():
         return silkflow.html.div("str", attr=attr(), blah="bongo")
 
@@ -121,15 +121,15 @@ async def test_attribute():
         assert container.text == "str"
         key = container["key"]
 
-        await _test_poll(client, 0, 0, [])
+        await _test_effects(client, 0, 0, [])
 
         _attr.value = "new_value"
 
-        await _test_poll(client, 0, 1, [[key, "attr", "new_value"]])
+        await _test_effects(client, 0, 1, [[key, "attr", "new_value"]])
 
         # # idempotent poll
-        await _test_poll(client, 0, 1, [[key, "attr", "new_value"]])
-        await _test_poll(client, 1, 1, [])
+        await _test_effects(client, 0, 1, [[key, "attr", "new_value"]])
+        await _test_effects(client, 1, 1, [])
 
         response = await client.get("/")
         assert response.status_code == 200
@@ -142,5 +142,5 @@ async def test_attribute():
         assert container.text == "str"
         assert container["key"] == key
 
-        await _test_poll(client, 0, 1, [[key, "attr", "new_value"]])
-        await _test_poll(client, 1, 1, [])
+        await _test_effects(client, 0, 1, [[key, "attr", "new_value"]])
+        await _test_effects(client, 1, 1, [])

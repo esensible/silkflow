@@ -96,8 +96,3 @@ body = _factory("body")
 script = _factory("script")
 link = _factory("link", allow_children=False)
 meta = _factory("meta", allow_children=False)
-
-
-# # Non-standard for reactive hooks
-# string = String
-# attr = Attribute
