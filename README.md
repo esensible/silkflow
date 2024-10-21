@@ -1,3 +1,8 @@
+# !! Deprecated !!
+
+I created this because I was targetting the Kindle Paperwhite with it's archaic Silk browser, however recent updates have included a more modern Chromium release meaning I can use all (well most...) the modern goodness. I've also moved to rust + solidjs on ESP32/RP2040 MCUs to reduce cost & power. While I think this architecture, with a very very thin client side library is great (compared to Streamlit or Dash), I won't be contributing further to this repo.
+Please fork and go nuts as you see fit! Go well.
+
 # Silkflow
 
 ## A fine grained reactive Python framework - for Kindles
